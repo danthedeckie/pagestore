@@ -1,6 +1,6 @@
 #pagestore (working title)
 
-[![Coverage Status](https://img.shields.io/coveralls/danthedeckie/pagestore.svg)](https://coveralls.io/r/danthedeckie/pagestore)
+[![Build Status](https://travis-ci.org/danthedeckie/pagestore.svg?branch=master)](https://travis-ci.org/danthedeckie/pagestore)  [![Coverage Status](https://img.shields.io/coveralls/danthedeckie/pagestore.svg)](https://coveralls.io/r/danthedeckie/pagestore)
 
 a simple python/sqlite library for storing documents/page data
 in a cache, so it can be full-text-searched easily.
