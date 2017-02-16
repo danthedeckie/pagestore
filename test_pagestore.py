@@ -38,10 +38,10 @@ food = [choc, mango, durian]
 class TestColSelect(unittest.TestCase):
 
     def test_empty(self):
-        self.assertEqual(_col_select(),u'SELECT id,key,html,json ')
+        self.assertEqual(_col_select(),'SELECT id,key,html,json ')
 
     def test_json_only(self):
-        self.assertEqual(_col_select('json'),u'SELECT json ')
+        self.assertEqual(_col_select('json'),'SELECT json ')
 
     def test_invalid_column_name(self):
         with self.assertRaises(AssertionError):
@@ -132,12 +132,17 @@ class TestMediumPageStore(unittest.TestCase):
     def test_all_pages(self):
         with PageStore(_DB) as c:
             # no limit:
-            self.assertEqual(c.all_pages('key'),[i['key'] for i in food])
+            self.assertEqual(
+                sorted(c.all_pages('key')),
+                sorted([i['key'] for i in food]))
             # single limit:
-            self.assertEqual(c.all_pages('key',1),[food[0]['key']])
+            self.assertEqual(
+                sorted(c.all_pages('key',1)),
+                sorted([food[0]['key']]))
             # get different columns:
-            self.assertEqual(c.all_pages(['key','json']),
-                    [(i['key'], i['json']) for i in food])
+            self.assertEqual(
+                sorted(c.all_pages(['key','json'])),
+                sorted([(i['key'], i['json']) for i in food]))
 
 
     def test_search(self):

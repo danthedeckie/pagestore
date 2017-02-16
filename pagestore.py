@@ -71,7 +71,7 @@ import logging
 #
 
 _CONTENT_TABLE_SQL = \
-    u'''CREATE TABLE 'page'
+    '''CREATE TABLE 'page'
          (id INTEGER PRIMARY KEY,
           key TEXT UNIQUE ON CONFLICT IGNORE NOT NULL,
           html TEXT,
@@ -79,18 +79,18 @@ _CONTENT_TABLE_SQL = \
     '''
 
 _FTS_TABLE_SQL = \
-    u''' CREATE VIRTUAL TABLE 'pagefts' USING FTS4
+    ''' CREATE VIRTUAL TABLE 'pagefts' USING FTS4
             (fulltext)
      '''
 
 _TAGS_TABLE_SQL = \
-    u''' CREATE TABLE 'tag'
+    ''' CREATE TABLE 'tag'
             (id INTEGER PRIMARY KEY,
               name TEXT UNIQUE ON CONFLICT IGNORE)
      '''
 
 _TAGS_XREF_SQL = \
-    u'''CREATE TABLE 'tagxref'
+    '''CREATE TABLE 'tagxref'
            (tagid INTEGER NOT NULL,
             pageid INTEGER NOT NULL,
             FOREIGN KEY(tagid) REFERENCES tag(id) ON DELETE CASCADE,
@@ -99,23 +99,23 @@ _TAGS_XREF_SQL = \
 
 # valid column names (for asserts)
 
-_VALID_COLUMNS = (u'id', u'key', u'html', u'json')
+_VALID_COLUMNS = ('id', 'key', 'html', 'json')
 
 def _col_select(columns=_VALID_COLUMNS, query=''):
     ''' checks $columns is a valid option, and returns a
         u'SELECT x,y,z' query from it. appends $query on the end.
         Saves a lot of boilerplate & potential mistakes. DRY. '''
     t = type(columns)
-    if t == unicode or t == str:
+    if t == str or t == str:
         assert columns in _VALID_COLUMNS
-        return u' '.join((u'SELECT', columns, query))
+        return ' '.join(('SELECT', columns, query))
     else:
         assert all((False for c in columns if c not in _VALID_COLUMNS))
-        return u' '.join((u'SELECT', u','.join(columns), query))
+        return ' '.join(('SELECT', ','.join(columns), query))
 
 def _qs(items):
     ''' returns a list of '?' for each item in $items, for use in queries. '''
-    return u','.join((u'?' for _ in items)) # ?, ?, ...
+    return ','.join(('?' for _ in items)) # ?, ?, ...
 
 #####################################################
 #
@@ -156,12 +156,12 @@ class PageStore(object):
         # theoretically, if people only use this class, and our unit tests are
         # solid, then no run-time foreign key checks are really needed...
         # One day doing some performance checks would be a good idea:
-        self.cur.execute(u'PRAGMA foreign_keys = ON')
+        self.cur.execute('PRAGMA foreign_keys = ON')
 
         # this should make things even faster, for our usual usecase.
         # I suppose we could turn synchronous ON before write-type operations?
         assert synchronous in ('ON','OFF')
-        self.cur.execute(u'PRAGMA synchronous = ' + unicode(synchronous))
+        self.cur.execute('PRAGMA synchronous = ' + str(synchronous))
 
     def initialise(self):
         ''' Initialises a new database,
@@ -210,79 +210,79 @@ class PageStore(object):
             Saves boilerplate.'''
 
         t = type(columns)
-        if t == unicode or t == str:
+        if t == str or t == str:
             return [x[0] for x in self.execute(query, *values).fetchall()]
         else:
             return self.execute(query, *values).fetchall()
 
-    def all_pages(self, columns=u'json', limit=-1):
+    def all_pages(self, columns='json', limit=-1):
         ''' get a list of all pages '''
 
         return self._return_columns(columns,
                                     _col_select(columns, \
-                                             u'FROM page LIMIT ?'), int(limit))
+                                             'FROM page LIMIT ?'), int(limit))
 
     def all_tags(self):
         ''' get a list of all tags '''
         return [t[0] for t in \
-                self.cur.execute(u"SELECT name FROM tag").fetchall()]
+                self.cur.execute("SELECT name FROM tag").fetchall()]
 
 
-    def search(self, needle, columns=u'json', limit=-1, ):
+    def search(self, needle, columns='json', limit=-1, ):
         ''' do a full text search for $needle,
             and return whichever columns you ask for. '''
 
-        query = _col_select(columns, u'FROM page WHERE id IN' \
-                u' (SELECT docid FROM pagefts WHERE fulltext MATCH ? ' \
-                u'  LIMIT ? )')
+        query = _col_select(columns, 'FROM page WHERE id IN' \
+                ' (SELECT docid FROM pagefts WHERE fulltext MATCH ? ' \
+                '  LIMIT ? )')
 
         return self._return_columns(columns, query, needle, int(limit))
 
 
-    def get_by_key(self, key, columns=u'json'):
+    def get_by_key(self, key, columns='json'):
         ''' retrieve an page by key '''
 
-        item = self.execute(_col_select(columns, u'FROM page WHERE key = ?'), \
+        item = self.execute(_col_select(columns, 'FROM page WHERE key = ?'), \
                            key).fetchone()
         t = type(columns)
         if item is None:
             return None
-        elif t is str or t is unicode:
+        elif t is str or t is str:
             return item[0]
         else:
             return item
 
     def get_tags_of_page(self, key):
         return [x[0] for x in self.execute(
-                    u"SELECT tag.name FROM tag, tagxref"
-                    u" WHERE tagxref.tagid = tag.id "
-                    u"   AND tagxref.pageid ="
-                    u"   (SELECT id FROM page WHERE key = ?)", key).fetchall()]
+                    "SELECT tag.name FROM tag, tagxref"
+                    " WHERE tagxref.tagid = tag.id "
+                    "   AND tagxref.pageid ="
+                    "   (SELECT id FROM page WHERE key = ?)", key).fetchall()]
     # TODO: get_by_keys (with LIKE, !=, etc...)
 
-    def get_by_tag(self, tag, columns=u'json'):
+    def get_by_tag(self, tag, columns='json'):
         ''' retrieve a list of pages by tag '''
 
         query = _col_select(columns,
-                u" FROM page, tag, tagxref " \
-                u" WHERE tag.name == ?" \
-                u"   AND tagxref.pageid == page.id" \
-                u"   AND tagxref.tagid == tag.id")
+                " FROM page, tag, tagxref " \
+                " WHERE tag.name == ?" \
+                "   AND tagxref.pageid == page.id" \
+                "   AND tagxref.tagid == tag.id")
 
         return self._return_columns(columns, query, tag)
 
-    def get_by_tags(self, tags, columns=u'json', exclude=()):
+    def get_by_tags(self, tags, columns='json', exclude=()):
         ''' gets all pages which have *any* of the tags listed.
             there is an exclude option too. '''
         # I know, I know, isinstance considered harmful. However,
         # this is the simplist way to do it:
         # (allow tags or exclude to be strings, or lists/tuples)
-        if isinstance(tags, str) or isinstance(tags, unicode):
+        if isinstance(tags, str) or isinstance(tags, str):
             tags = (tags,)
         elif type(tags) is not tuple:
             tags = tuple(tags)
 
-        if isinstance(exclude, str) or isinstance(exclude, unicode):
+        if isinstance(exclude, str) or isinstance(exclude, str):
             exclude = (exclude,)
         elif type(exclude) is not tuple:
             exclude = tuple(exclude)
@@ -290,15 +290,15 @@ class PageStore(object):
         # I feel sure there should be a way to do this with JOINs, which
         # might be quicker...
         query = _col_select(columns,
-            u" FROM page " \
-            u" WHERE page.id IN " \
-            u"           ( SELECT pageid from tag, tagxref " \
-            u"              WHERE tag.name IN ( {0} )" \
-            u"                AND tagxref.tagid == tag.id) " \
-            u" AND page.id NOT IN " \
-            u"           ( SELECT pageid from tag, tagxref " \
-            u"              WHERE tag.name IN ( {1} ) " \
-            u"                AND tagxref.tagid == tag.id)".format(
+            " FROM page " \
+            " WHERE page.id IN " \
+            "           ( SELECT pageid from tag, tagxref " \
+            "              WHERE tag.name IN ( {0} )" \
+            "                AND tagxref.tagid == tag.id) " \
+            " AND page.id NOT IN " \
+            "           ( SELECT pageid from tag, tagxref " \
+            "              WHERE tag.name IN ( {1} ) " \
+            "                AND tagxref.tagid == tag.id)".format(
             _qs(tags), _qs(exclude)))
 
         return self._return_columns(columns, query, *(tags + exclude))
@@ -309,7 +309,7 @@ class PageStore(object):
         self.changed = True
 
         if page_key:
-            self.execute(u"DELETE FROM 'page' WHERE key == ?", page_key)
+            self.execute("DELETE FROM 'page' WHERE key == ?", page_key)
             # this AUTOMATICALLY (due to SQL coolness)
             # should delete tagxrefs too...
             # TODO: think about checking here for unused tags?
@@ -317,10 +317,10 @@ class PageStore(object):
         if everything:
             # possible slight performance hit - both here and in 'initialise'
             # we check IF EXISTS on all tables.  Should be negligable, though.
-            self.execute(u"DROP TABLE IF EXISTS tagxref")
-            self.execute(u"DROP TABLE IF EXISTS tag")
-            self.execute(u"DROP TABLE IF EXISTS page")
-            self.execute(u"DROP TABLE IF EXISTS pagefts")
+            self.execute("DROP TABLE IF EXISTS tagxref")
+            self.execute("DROP TABLE IF EXISTS tag")
+            self.execute("DROP TABLE IF EXISTS page")
+            self.execute("DROP TABLE IF EXISTS pagefts")
             # we could possibly do all this just as one single executescript
             # command? since this should happen so rarely, it's almost certainly
             # not worth it...
@@ -336,9 +336,9 @@ class PageStore(object):
         ''' create any needed xref links for page<->tag '''
         self.changed = True
         # (a bit ugly python)
-        self.execute(u'INSERT INTO tagxref(tagid, pageid) ' \
-                     u'  SELECT rowid, ? FROM tag WHERE name IN (' \
-                         + _qs(tags) + u')', # ?, ?, ...
+        self.execute('INSERT INTO tagxref(tagid, pageid) ' \
+                     '  SELECT rowid, ? FROM tag WHERE name IN (' \
+                         + _qs(tags) + ')', # ?, ?, ...
                      page, *tags)
 
     def store(self, key, html, json, fulltext, tags):
@@ -347,14 +347,14 @@ class PageStore(object):
         self.changed = True
 
         # write main page:
-        self.execute(u"INSERT INTO page(key, html, json) VALUES(?, ?, ?)",
+        self.execute("INSERT INTO page(key, html, json) VALUES(?, ?, ?)",
                      key, html, json)
 
         # get new page id:
         rowid = self.cur.lastrowid
 
         # add full searchable text:
-        self.execute(u"INSERT INTO pagefts(docid, fulltext) VALUES(?, ?)",
+        self.execute("INSERT INTO pagefts(docid, fulltext) VALUES(?, ?)",
                      rowid, fulltext)
 
         # create any new needed tags:
@@ -382,7 +382,7 @@ class PageStore(object):
         self.changed = True
 
         # first get the appropriate id:
-        self.execute(u"SELECT id FROM page WHERE key = ?", \
+        self.execute("SELECT id FROM page WHERE key = ?", \
                      old_key if old_key else key)
         docid = self.cur.fetchone()
 
@@ -393,11 +393,11 @@ class PageStore(object):
             docid = docid[0]
 
         # update the main table:
-        self.execute(u"UPDATE page SET key=?, html=?, json=? WHERE id=?",
+        self.execute("UPDATE page SET key=?, html=?, json=? WHERE id=?",
                      key, html, json, docid)
 
         # update the fts table
-        self.execute(u"UPDATE pagefts SET fulltext=? WHERE docid=?",
+        self.execute("UPDATE pagefts SET fulltext=? WHERE docid=?",
                      fulltext, docid)
 
         # update the tags table
@@ -405,5 +405,5 @@ class PageStore(object):
         # TODO: think about deleting unused tags
 
         # update the tagxref table:
-        self.execute(u'DELETE FROM tagxref WHERE pageid=?', docid)
+        self.execute('DELETE FROM tagxref WHERE pageid=?', docid)
         self._link_tags(docid, tags)
